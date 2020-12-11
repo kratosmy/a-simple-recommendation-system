@@ -1,0 +1,115 @@
+Here is group 7, today I will talk about our project, Frequent Itemsets Mining for Recommender Systems.
+
+There are three main parts during this presentation, first is introduction, then methodology, which is the main part of our implementation, the third one is our experimental result and some analysis.
+
+OK, here is the introduction part. 
+
+In 2019, an estimated 1.92 billion people purchased goods or services online. During the same year, e-retail sales surpassed 3.5 trillion U.S. dollars worldwide, and according to the latest calculations, e-commerce growth will
+accelerate even further in the future. Secondly, customers’ shopping
+behavior can be affected by different factors such as regions,
+personal habits, global events, etc.Moreover, retail platforms have undergone an unprecedented global
+traffic increase between January 2019 and June 2020, surpassing
+even holiday season traffic peaks.
+Based on the motivation of Providing customized product recommendation to different customers
+.This project aims to present more dimensions
+in regards to item recommendations. For instance, what brands
+should be recommended to shoppers, what
+kind of similar items should be recommended, etc. The proposed
+recommender system can help users to find their purchasing habits
+according to their previous purchasing history as well as fulfill the
+functionality of doing recommendation.
+
+Then let's talk about the methodology, 
+
+at the very beginning, This project uses E-commerce behavior data from multi-category
+store available on kaggle as datasets. The datasets contain 285 million
+users’ purchasing events from a large multi-category online store
+for a duration of 3 months, dated from February 2020 to April 2020. The total size of datasets is 23.04 GB, which is a relatively huge volume dataset.
+
+This graph shows a general structure of data pre-processing, I will expand it in the following slides.
+
+Since the project will not use the entire dataset to proceed, data in
+the CSV file are loaded into the R environment according to their
+tags and wait for selection. At the same time, the ’row’ column
+is added to facilitate the subsequent index. 
+
+For data cleaning, the
+strategy of deleting data if there exists missing values in different
+tags. The final processing result is in the format of [row, user_id,
+product_id] with a size of 4.78GB. 
+
+
+The purpose of association rule mining is to find the hidden relationship
+between items. In order to reduce the generation time of
+frequent itemsets, some sets which are completely impossible to be
+frequent itemsets can be eliminated based on two laws of A-priori. The first law is if a set is a frequent itemset, then all its subsets are frequent itemsets. The second one is if a set is not a frequent itemset, then all its supersets are not frequent itemsets. 
+SON Algorithm is a partition algorithm based on A-priori. It scans
+the item datasets twice. In the first scan, a set of itemsets will be
+generated, which contains all frequent itemsets; In the second scan,
+each itemset obtained from the last scan will be counted to get its
+support, and the final frequent itemset will be obtained according
+to the minimum support. The process of the algorithm is divided
+into two stages. In stage one, the algorithm divides the whole item
+datasets into non overlapping partitions logically, and each partition
+is independent of each other. The local frequent itemsets on the
+partition are calculated separately for each partition. Finally, the
+local frequent itemsets caculated on all partitions are summed up
+to get a global candidate itemset. In the previous stage, the support
+of each candidate itemset in the whole item dataset is calculated,
+and then whether the minimum support meets the condition can
+be determined, so as to obtain the final result. The accuracy of SON
+algorithm is based on if an itemset is globally frequent, then the
+itemset is locally frequent at least in one partition.
+
+This graph shows the whole implementation process of our project, after finishing the mapreduce jobs, we store these data into MySQL database and then utilize the decision tree to query recommendations with an interface for users' input.
+
+Here I would talk about some detail of our mapreduce job. The first MapReduce was designed to produce basket lists such
+that every user ID represented one basket, and products bought by
+the user became the corresponding items in the basket.
+Mapper A, which is the first mapper, would read in the retail store
+data, and then sort the data according to the user ID. Finally, it outputted a tuple in the format of [user ID, product ID] for every
+retail record. With the output from the mapper, reducer A would
+collect all the product IDs and assign them to the corresponding
+user IDs. To achieve such goal, reducer A would create a dictionary
+with keys being all the user IDs. Whenever it received the output
+from mapper A, it would append the product IDs to the right keys.
+
+
+Then in second mapreduce job, 10 mapper B were assigned to handle the baskets
+of the 10 chunks. Each mapper read in the basket lists from one
+chunk, and calculated the support for every single product within
+that chunk and filtered out frequent itemsets of size 1. 
+Now, all frequent itemset candidates of the 10 mappers would be
+passed to one reducer B, which checked repetitiveness of the incoming
+frequent itemset candidates and removed repeated frequent
+itemsets, therefore outputting a complete list of frequent itemset
+candidates.
+
+The third MapReduce was responsible for finding the true frequent
+itemsets from the candidates and returning all true frequent itemsets
+with their support. To be detailed, the basket lists produced
+by the first MapReduce were split into ten chunks, each of which
+would be fed into one Mapper C. The complete list of frequent
+itemset candidates was also passed into all 10 Mapper C, which
+would then calculate the support for the list candidates within their
+corresponding chunks. Upon completion of calculation, all 10 mapper
+C would output tuples of the form [candidate frequent itemset,
+support] to one reducer C for support summation. Reducer C would sum all supports of the same candidate from the ten chunks, and
+filter out terms with support no less than 600 and return the true
+frequent itemsets with their corresponding support.
+
+We use a different approach to handle the frequent item sets. The prerequisites is to Generate frequent item sets with size from 1 to 4.
+Two sample has been shown in the right side. It is just a sample, not the true data. table one represent the original data set and table 2 is generated from table 1.
+
+To achieve a precise practical personalized recommendation, a general
+idea is organize these frequent itemsets together with original
+purchase history dataset. Based on the A-Priori algorithm, it
+is distinct that frequent item sets with size 2 must conclude part of
+single frequent items, and this pattern is scalable for other sizes’
+item sets. The table in the right side shows a sample for each rounds' recommendations. And future recommended items would be deduced from the previous items.
+
+
+Finally I would show a result of our experimentation. Right part is the user interface, and for a specific user, there are four main steps. 	Input his/her user_id to login and click the item button in the left form to ask for recommendation.
+Recommender system will first recommend what he/she has bought according to the browse history.
+User will click the button in the bottom part of the right form to ask for more recommendation if he/she is not satisfied with the first round recommendation.
+Recommender system will search from the frequent item pair to do next round recommendation until the quaternion pair is recommended.
